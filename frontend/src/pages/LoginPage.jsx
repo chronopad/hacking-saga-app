@@ -8,14 +8,14 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const { login, isLoggingIn } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     login(formData);
-  }
+  };
 
   return (
     <div className="h-screen grid lg:grid-cols-2">
