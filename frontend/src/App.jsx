@@ -1,3 +1,8 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Loader } from "lucide-react";
+import { Toaster } from "react-hot-toast";
+
 import Navbar from "./components/Navbar.jsx";
 
 import HomePage from "./pages/HomePage.jsx";
@@ -8,14 +13,12 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 
 import { axiosInstance } from "./lib/axios.js";
 import { useAuthStore } from "./store/useAuthStore.js";
-
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
-import { Loader } from "lucide-react";
-import { Toaster } from "react-hot-toast";
+import { useThemeStore } from "./store/useThemeStore.js";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const { theme } = useThemeStore();
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -28,7 +31,7 @@ const App = () => {
   );
 
   return (
-    <div>
+    <div data-theme={theme}>
       <Navbar />
 
       <Routes>
