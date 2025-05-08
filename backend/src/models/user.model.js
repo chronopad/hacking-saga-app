@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    profileBio: {
+      type: String,
+      default: "",
+      maxlength: 200
+    }
   },
   { timestamps: true }
 );

@@ -10,7 +10,7 @@ export const searchUser = async (req, res) => {
 
         const users = await User.find({
             username: { $regex: usernameQuery, $options: "i" }
-        }).select("-_id username profilePic");
+        }).select("-_id username profilePic profileBio");
 
         if (users.length === 0) {
             return res.status(400).json({ message: "No users matched your search" });
