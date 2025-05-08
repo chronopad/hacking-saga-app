@@ -4,37 +4,41 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { username, email, password } = req.body;
   try {
-    if (!fullName || !email || !password) {
+    if (!username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)){
+      return res.status(400).json({ message: "Username must be 3–20 characters long and contain only letters, numbers, and underscores" });
     }
 
     if (password.length < 6) {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
 
-    if (user) return res.status(400).json({ message: "Email already exists" });
+    if (user) return res.status(400).json({ message: "User already exists" });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      fullName,
+      username,
       email,
       password: hashedPassword,
     });
 
     if (newUser) {
-      // generate jwt token here
       generateToken(newUser._id, res);
       await newUser.save();
 
       res.status(201).json({
         _id: newUser._id,
-        fullName: newUser.fullName,
+        username : newUser.username,
         email: newUser.email,
         profilePic: newUser.profilePic,
       });
@@ -48,9 +52,9 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -65,7 +69,7 @@ export const login = async (req, res) => {
 
     res.status(200).json({
       _id: user._id,
-      fullName: user.fullName,
+      username: user.username,
       email: user.email,
       profilePic: user.profilePic,
     });
@@ -91,7 +95,7 @@ export const updateProfile = async (req, res) => {
     const userId = req.user._id;
 
     if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+      return res.status(400).json({ message: "Profile picture is required" });
     }
 
     const uploadResponse = await cloudinary.uploader.upload(profilePic);
@@ -103,8 +107,8 @@ export const updateProfile = async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.log("error in update profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.log("error in update profile:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
