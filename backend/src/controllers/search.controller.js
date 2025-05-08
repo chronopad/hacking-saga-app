@@ -18,7 +18,7 @@ export const searchUser = async (req, res) => {
 
         res.status(200).json({ users });
     } catch (error) {
-        console.log("Error in searchUser controller:", error.message);
+        console.log("Error in searchUser controller: ", error.message);
         res.status(500).json({ message: "Internal Server Error" });
     }
 }
