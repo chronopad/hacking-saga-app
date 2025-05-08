@@ -4,6 +4,6 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/users/:id", protectRoute, searchUser);
+router.post("/users", protectRoute, searchUser);
 
 export default router;
