@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* SVG Wave Container (for waves from bottom to middle) */
+.svg-wave-container {
+  position: absolute;
+  bottom: 0; /* Waves start from the very bottom of the screen */
+  left: 0;
+  width: 100%;
+  height: 50vh; /* Waves cover from bottom to the middle of the screen (50% of viewport height) */
+  min-height: 200px; /* Adjust min/max if 50vh is too small/large on certain screens */
+  max-height: 500px; /* Prevents waves from becoming too tall on very large displays */
+  z-index: 0;
+  background-color: transparent; /* Or match your background blue */
+}
+
+.waves {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-bottom: -7px; /* Fix for whitespace at bottom */
+}
+
+/* Animation for the SVG waves (keep these as they are for horizontal movement) */
+.parallax > use {
+  animation: move-forever 25s cubic-bezier(0.55, 0.5, 0.45, 0.5) infinite;
+}
+.parallax > use:nth-child(1) {
+  animation-delay: -2s;
+  animation-duration: 7s;
+}
+.parallax > use:nth-child(2) {
+  animation-delay: -3s;
+  animation-duration: 10s;
+}
+.parallax > use:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 13s;
+}
+
+@keyframes move-forever {
+  0% {
+    transform: translate3d(-90px, 0, 0);
+  }
+  100% {
+    transform: translate3d(85px, 0, 0);
+  }
+}
+
+/* Boat Animation */
+.boat-animation {
+  width: 375px;
+  max-width: 80%;
+  height: auto;
+  /* MODIFIED: Custom cubic-bezier for smoother, more natural bobbing */
+  /* This bezier provides a gentler ease-in-out, slowing down more at peaks and troughs. */
+  animation: boat-bobbing 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+@keyframes boat-bobbing {
+  /* Retaining the 5 core keyframes */
+  0% { transform: translateX(-50%) translateY(0px) rotate(0deg); }
+  25% { transform: translateX(-50%) translateY(-10px) rotate(2deg); } /* Move up and slight roll */
+  50% { transform: translateX(-50%) translateY(0px) rotate(0deg); } /* Return to level */
+  75% { transform: translateX(-50%) translateY(10px) rotate(-2deg); } /* Move down and slight roll */
+  100% { transform: translateX(-50%) translateY(0px) rotate(0deg); }
+}
+
+
+/* Ensure your main div has a background color that matches the top part of the waves' "ocean" */
+.bg-blue-500 { /* Or whatever blue matches your design */
+  background-color: #3b82f6; /* Example Tailwind blue-500 */
+}
