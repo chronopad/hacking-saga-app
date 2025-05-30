@@ -1,76 +1,102 @@
-// GamePage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 function GamePage() {
-    const navigate = useNavigate();
-    const { inGame, matchData, socket, resetGame, playerWins, gameEnded, gameResult } = useGameStore();
+    const {
+        inGame,
+        matchData,
+        socket,
+        resetGame,
+        playerWins,
+        gameEnded,
+        gameResult
+    } = useGameStore();
     const { authUser } = useAuthStore();
 
     const [showGameEndedDialog, setShowGameEndedDialog] = useState(false);
-    const [isDeclaringWin, setIsDeclaringWin] = useState(false);
+    const [isAttemptingWinDeclaration, setIsAttemptingWinDeclaration] = useState(false);
 
-    // Effect for handling navigation based on game state
+    const navigate = useNavigate();
+
     useEffect(() => {
-        // Navigate home if not authenticated OR if not in a game and no game result is being shown
-        if (!authUser || (!inGame && !gameEnded)) {
-            console.log("GamePage: Navigating home due to game state or no authUser.");
+        console.log("GamePage useEffect (navigation) re-running.");
+        console.log("  inGame (nav):", inGame);
+        console.log("  gameEnded (nav):", gameEnded);
+        console.log("  authUser (nav):", authUser ? "present" : "absent");
+
+        if (!authUser) {
+            console.log("GamePage: Navigating home - no authenticated user.");
             navigate('/');
+            return;
         }
+
+        if (gameEnded) {
+            console.log("GamePage: Staying on page - game has ended, waiting for dialog.");
+            return;
+        }
+
+        if (inGame) {
+            console.log("GamePage: Staying on page - currently in game.");
+            return;
+        }
+
+        console.log("GamePage: Navigating home - neither inGame nor gameEnded is true and authUser exists.");
+        navigate('/');
     }, [authUser, inGame, gameEnded, navigate]);
 
-    // Effect for showing game ended dialog
     useEffect(() => {
+        console.log("GamePage useEffect (dialog) re-running. gameEnded (dialog):", gameEnded);
         if (gameEnded) {
             setShowGameEndedDialog(true);
-            setIsDeclaringWin(false); // Reset button state
-            console.log("GamePage: Game ended, showing dialog.");
+            setIsAttemptingWinDeclaration(false);
+            console.log("GamePage: Game ended, setting dialog to true.");
+        } else {
+            setShowGameEndedDialog(false);
         }
     }, [gameEnded]);
 
-    // Handle the "I Win!" button click
     const handleWinClick = () => {
-        // Only allow clicking if authenticated, match data exists,
-        // not already declaring a win, and the game hasn't officially ended.
-        if (authUser?._id && matchData?.matchId && !isDeclaringWin && !gameEnded) {
-            setIsDeclaringWin(true);
+        if (authUser?._id && matchData?.matchId && !isAttemptingWinDeclaration && !gameEnded) {
+            setIsAttemptingWinDeclaration(true);
             playerWins(matchData.matchId, authUser._id);
             console.log("GamePage: Attempting to declare win...");
         } else {
-            console.warn("GamePage: Cannot declare win: Conditions not met (e.g., already clicked, game ended, or missing data).");
+            console.warn("GamePage: Cannot declare win. Missing data, already clicked, or game already ended.");
         }
     };
 
-    // Handle "Back to Home" button in dialog
     const handleBackToHome = () => {
+        console.log("GamePage: 'Back to Home' button pressed.");
         setShowGameEndedDialog(false);
-        resetGame(); // Resets game state and disconnects socket
+        resetGame();
     };
 
-    // Render loading or unauthorized state
     if (!authUser) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-gray-700">
-                <h2 className="text-xl font-bold">Please log in to play.</h2>
-                <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+                <h2 className="text-xl font-bold mb-4">Please log in to play.</h2>
+                <button
+                    onClick={() => navigate('/')}
+                    className="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors"
+                >
                     Go Home
                 </button>
             </div>
         );
     }
 
-    // Show loading if game is not active and no game result is pending to display
     if (!inGame && !gameEnded) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-gray-700">
-                <h2 className="text-xl font-bold">Loading game or redirecting...</h2>
+            <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700">
+                <h2 className="text-2xl font-bold mb-4 text-gray-800">Finding your opponent...</h2>
+                <p className="text-lg text-gray-600">Please wait, matchmaking in progress.</p>
+                <div className="w-12 h-12 border-4 border-purple-400 border-t-purple-700 rounded-full animate-spin mt-6"></div>
             </div>
         );
     }
 
-    // Main Game Page Content
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-100 to-indigo-200 p-4">
             <h1 className="text-4xl font-extrabold text-purple-800 mb-6 drop-shadow">
@@ -90,8 +116,7 @@ function GamePage() {
                 <div className="mt-8">
                     <button
                         onClick={handleWinClick}
-                        // Disable if socket not connected, game has ended, or currently declaring win
-                        disabled={!socket?.connected || gameEnded || isDeclaringWin}
+                        disabled={!socket?.connected || gameEnded || isAttemptingWinDeclaration}
                         className="
                             bg-green-600 hover:bg-green-700 active:bg-green-800
                             text-white font-bold py-3 px-8 rounded-full shadow-lg
@@ -99,7 +124,7 @@ function GamePage() {
                             hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed
                         "
                     >
-                        {isDeclaringWin ? 'Declaring Win...' : 'I Win! (Click to end game)'}
+                        {isAttemptingWinDeclaration ? 'Declaring Win...' : 'I Win! (Click to end game)'}
                     </button>
                     {!socket?.connected && (
                         <p className="text-red-500 text-sm mt-2">Socket not connected. Cannot declare win.</p>
@@ -107,7 +132,6 @@ function GamePage() {
                 </div>
             </div>
 
-            {/* Game Ended Dialog */}
             {showGameEndedDialog && gameResult && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg shadow-xl p-8 text-center max-w-sm mx-auto animate-fade-in-up">

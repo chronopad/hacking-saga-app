@@ -5,33 +5,26 @@ import express from "express";
 const app = express();
 const server = http.createServer(app);
 
-// Centralized data stores for the matchmaking system
-const userSocketMap = {};    // Maps userId to socket.id for the default namespace
-const matchSocketMap = {};   // Maps userId to socket.id for the /match namespace
-const matchmakingQueue = []; // Simple queue for demonstration purposes
-const activeMatches = {};    // matchId -> { player1Id, player2Id }
+const userSocketMap = {};
+const matchSocketMap = {};
+const matchmakingQueue = [];
+const activeMatches = {};
 
-// Initialize Socket.IO server
 const io = new Server(server, {
     cors: {
         origin: ["http://localhost:5173"],
     },
 });
 
-// Helper function to get a user's socket ID from the default namespace
 export function getReceiverSocketId(userId) {
     return userSocketMap[userId];
 }
 
-// --- Connection and Disconnection Handlers ---
-
-// Handles connections to the default namespace '/'
 io.on("connection", (socket) => {
     const userId = socket.handshake.query.userId;
     console.log(`Socket Connected (Default): ID=${socket.id}, UserID=${userId || 'N/A'}`);
 
     if (userId) {
-        // Disconnect any old socket for this user in the default namespace
         if (userSocketMap[userId] && userSocketMap[userId] !== socket.id) {
             const oldSocket = io.sockets.sockets.get(userSocketMap[userId]);
             if (oldSocket) {
@@ -44,7 +37,6 @@ io.on("connection", (socket) => {
         console.warn(`Default Socket: Connected socket ${socket.id} has no userId.`);
     }
 
-    // Emit updated online users list to all clients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
     socket.on("disconnect", (reason) => {
@@ -56,7 +48,6 @@ io.on("connection", (socket) => {
     });
 });
 
-// Handles connections to the '/match' namespace
 const matchIo = io.of("/match");
 matchIo.on("connection", (socket) => {
     const userId = socket.handshake.query.userId;
@@ -64,11 +55,10 @@ matchIo.on("connection", (socket) => {
 
     if (!userId) {
         console.warn(`Match Socket: Connected socket ${socket.id} has no userId. Disconnecting.`);
-        socket.disconnect(true); // Disconnect if no userId is provided
+        socket.disconnect(true);
         return;
     }
 
-    // Disconnect any old socket for this user in the match namespace
     if (matchSocketMap[userId] && matchSocketMap[userId] !== socket.id) {
         const oldSocket = matchIo.sockets.get(matchSocketMap[userId]);
         if (oldSocket) {
@@ -77,8 +67,6 @@ matchIo.on("connection", (socket) => {
         }
     }
     matchSocketMap[userId] = socket.id;
-
-    // --- Matchmaking Event Handlers ---
 
     socket.on("start_matchmaking", () => {
         console.log(`Matchmaking: User ${userId} requested to start matchmaking.`);
@@ -100,7 +88,6 @@ matchIo.on("connection", (socket) => {
 
                 activeMatches[matchId] = { player1Id, player2Id };
 
-                // Notify both players
                 if (matchSocketMap[player1Id]) {
                     matchIo.to(matchSocketMap[player1Id]).emit("match_found", { matchId, opponentId: player2Id });
                 } else {
@@ -128,8 +115,6 @@ matchIo.on("connection", (socket) => {
         }
     });
 
-    // --- Game Event Handlers ---
-
     socket.on("player_wins", ({ matchId, winnerId }) => {
         console.log(`Game End: Player ${winnerId} declared win for match ${matchId}.`);
 
@@ -152,8 +137,6 @@ matchIo.on("connection", (socket) => {
         console.log(`Game End: Match ${matchId} removed from active matches.`);
     });
 
-    // --- Disconnect Handler for Match Namespace ---
-
     socket.on("disconnect", (reason) => {
         console.log(`Socket Disconnected (Match): ID=${socket.id}, UserID=${userId || 'N/A'}, Reason=${reason}`);
 
@@ -161,14 +144,12 @@ matchIo.on("connection", (socket) => {
             delete matchSocketMap[userId];
         }
 
-        // Remove from matchmaking queue if disconnected
         const queueIndex = matchmakingQueue.indexOf(userId);
         if (queueIndex > -1) {
             matchmakingQueue.splice(queueIndex, 1);
             console.log(`Matchmaking: User ${userId} removed from queue due to disconnect.`);
         }
 
-        // Handle mid-game disconnect
         for (const mId in activeMatches) {
             const match = activeMatches[mId];
             if (match.player1Id === userId || match.player2Id === userId) {

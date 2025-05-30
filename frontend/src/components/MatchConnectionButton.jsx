@@ -1,4 +1,3 @@
-// MatchConnectionButton.jsx
 import React, { useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -9,26 +8,21 @@ function MatchConnectionButton() {
         isMatchmaking,
         startMatchmaking,
         stopMatchmaking,
-        inGame // Ensure inGame is destructured
+        inGame
     } = useGameStore();
 
     const { authUser } = useAuthStore();
 
-    // Effect for cleaning up matchmaking state on component unmount
     useEffect(() => {
         return () => {
-            // Get the latest state directly from the store at cleanup time
             const { isMatchmaking: currentIsMatchmaking, inGame: currentInGame } = useGameStore.getState();
 
-            // If component unmounts while matchmaking is active AND we are NOT in a game,
-            // then explicitly stop matchmaking. If inGame is true, it means a match was found,
-            // and the game page will take over, so we don't stop matchmaking here.
             if (currentIsMatchmaking && !currentInGame) {
                 console.log("MatchConnectionButton: Component unmounting while matchmaking, stopping matchmaking.");
                 useGameStore.getState().stopMatchmaking();
             }
         };
-    }, []); // Empty dependency array means this runs once on mount, and cleanup on unmount
+    }, []);
 
     const handleStartMatchingClick = () => {
         if (!authUser) {
@@ -62,7 +56,6 @@ function MatchConnectionButton() {
                 )
             </p>
 
-            {/* Show Start button if not matchmaking AND not in game */}
             {!isMatchmaking && !inGame ? (
                 <button
                     onClick={handleStartMatchingClick}
@@ -76,7 +69,6 @@ function MatchConnectionButton() {
                     {!authUser ? 'Login to Match' : 'Start Matching'}
                 </button>
             ) : (
-                // Show Stop button if matchmaking (inGame should ideally not be true here, but handled for robustness)
                 <button
                     onClick={handleStopMatchingClick}
                     className="
@@ -88,7 +80,6 @@ function MatchConnectionButton() {
                 </button>
             )}
 
-            {/* Example message emit button (optional, for debugging/dev) */}
             {socket && socket.connected && (
                 <button
                     onClick={() => {
