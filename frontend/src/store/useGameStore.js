@@ -9,24 +9,24 @@ let gameSocketInstance = null;
 export const useGameStore = create((set, get) => ({
     socket: null,
     isMatchmaking: false,
+    inGame: false,
+    matchData: null,
+    gameEnded: false,   // NEW: State to signal game has concluded
+    gameResult: null,   // NEW: Stores winner/loser info
 
     startMatchmaking: (authUser) => {
-        // Set matchmaking state to true immediately
-        set({ isMatchmaking: true });
-        // Call connectSocket; the emit will happen *after* connection
+        set({ isMatchmaking: true, gameEnded: false, gameResult: null }); // Reset game end states on start
         get().connectSocket(authUser);
         console.log('User attempting to start matchmaking (connection initiated)...');
     },
 
     stopMatchmaking: () => {
         const currentSocket = get().socket;
-        if (currentSocket?.connected) {
+        if (currentSocket?.connected && get().isMatchmaking) {
             currentSocket.emit('stop_matchmaking');
             console.log('Emitted stop_matchmaking event to server.');
         }
-
         set({ isMatchmaking: false });
-        get().disconnectSocket();
     },
 
     connectSocket: (authUser) => {
@@ -44,7 +44,7 @@ export const useGameStore = create((set, get) => ({
         if (gameSocketInstance?.connected && gameSocketInstance.handshake.query.userId !== authUser._id) {
             console.log("Connect attempt: Socket connected for a different user. Disconnecting old socket.");
             gameSocketInstance.disconnect();
-            gameSocketInstance = null; // Clear immediately to allow fresh creation
+            gameSocketInstance = null;
         }
 
         if (!gameSocketInstance) {
@@ -60,8 +60,6 @@ export const useGameStore = create((set, get) => ({
                 console.log("Match socket connected:", gameSocketInstance.id);
                 set({ socket: gameSocketInstance });
 
-                // FIX: Emit 'start_matchmaking' ONLY when the socket is confirmed connected,
-                // and if the matchmaking state is still active (meaning user hasn't cancelled).
                 if (get().isMatchmaking) {
                     gameSocketInstance.emit('start_matchmaking');
                     console.log('Emitted start_matchmaking event from on("connect") listener.');
@@ -71,25 +69,41 @@ export const useGameStore = create((set, get) => ({
             gameSocketInstance.on("disconnect", (reason) => {
                 toast.error(`Match socket disconnected: ${reason}`);
                 console.log("Match socket disconnected:", reason);
-                set({ socket: null });
-                set({ isMatchmaking: false });
-                gameSocketInstance = null; // Clear the module-level instance to allow re-creation
+                // On disconnect, ensure all game states are reset
+                set({ socket: null, isMatchmaking: false, inGame: false, matchData: null, gameEnded: false, gameResult: null });
+                gameSocketInstance = null;
             });
 
             gameSocketInstance.on("connect_error", (error) => {
                 toast.error(`Match socket connection error: ${error.message}`);
                 console.error("Match socket connection error:", error);
-                set({ socket: null });
-                set({ isMatchmaking: false });
+                // On connect error, ensure all game states are reset
+                set({ socket: null, isMatchmaking: false, inGame: false, matchData: null, gameEnded: false, gameResult: null });
             });
 
-            // Add your game-specific listeners here
             gameSocketInstance.on("match_found", (matchData) => {
-                toast.success(`Match found: ${matchData.matchId} with ${matchData.opponentId}!`);
+                toast.success(`Match found! Opponent: ${matchData.opponentId}`);
                 console.log("Match found:", matchData);
-                set({ isMatchmaking: false }); // Stop matchmaking state when a match is found
-                // You might want to update game state with matchData or navigate to a game screen
+                set({
+                    isMatchmaking: false,
+                    inGame: true,
+                    matchData: matchData,
+                    gameEnded: false, // Ensure this is false at game start
+                    gameResult: null  // Ensure this is null at game start
+                });
             });
+
+            // FIX: game_ended now just sets state, doesn't call resetGame immediately
+            gameSocketInstance.on("game_ended", (data) => {
+                toast.success(`Game Over! Winner: ${data.winnerId}`);
+                console.log("Game Ended:", data);
+                set({
+                    gameEnded: true,
+                    gameResult: data // Store the winner/loser info
+                });
+                // resetGame will be called from the GamePage component when the user dismisses the dialog
+            });
+
         }
 
         if (!gameSocketInstance.connected) {
@@ -107,7 +121,30 @@ export const useGameStore = create((set, get) => ({
         } else {
             console.log("Match socket not connected, no explicit disconnect action needed.");
             gameSocketInstance = null;
-            set({ socket: null });
+            set({ socket: null, inGame: false, matchData: null, gameEnded: false, gameResult: null });
         }
+    },
+
+    playerWins: (matchId, winnerId) => {
+        const currentSocket = get().socket;
+        if (currentSocket?.connected && get().inGame && get().matchData?.matchId === matchId) {
+            currentSocket.emit("player_wins", { matchId, winnerId });
+            console.log(`Emitting player_wins for match ${matchId}, winner ${winnerId}`);
+        } else {
+            console.warn("Cannot emit player_wins: Not in game or socket not connected.");
+        }
+    },
+
+    // resetGame now explicitly disconnects the socket and cleans up state after a game
+    resetGame: () => {
+        console.log("Resetting game state and disconnecting socket.");
+        set({
+            isMatchmaking: false,
+            inGame: false,
+            matchData: null,
+            gameEnded: false, // Reset this
+            gameResult: null  // Reset this
+        });
+        get().disconnectSocket(); // Disconnect the game socket when game ends
     },
 }));

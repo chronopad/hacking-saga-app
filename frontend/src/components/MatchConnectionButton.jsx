@@ -1,7 +1,5 @@
 // MatchConnectionButton.jsx
 import React, { useEffect } from 'react';
-// Removed 'Toaster' and 'toast' import
-// import { Toaster } from 'react-hot-toast'; 
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -11,25 +9,28 @@ function MatchConnectionButton() {
     isMatchmaking,
     startMatchmaking,
     stopMatchmaking,
+    inGame // Need to get inGame state to refine cleanup logic
   } = useGameStore();
 
   const { authUser } = useAuthStore();
 
-  // FIX: Modified useEffect to only run cleanup on component unmount
+  // FIX: Modified useEffect cleanup condition
   useEffect(() => {
     return () => {
       // Access the latest state directly from the store to ensure it's up-to-date
-      // without adding them as dependencies to this useEffect.
       const {
           isMatchmaking: currentIsMatchmaking,
-          socket: currentSocket,
+          inGame: currentInGame, // Get inGame for cleanup logic
           stopMatchmaking: currentStopMatchmaking
       } = useGameStore.getState();
 
-      if (currentIsMatchmaking || (currentSocket && currentSocket.connected)) {
-        console.log("MatchConnectionButton unmounting: Attempting to stop matchmaking and disconnect socket.");
+      // Only attempt to stop matchmaking if we were in matchmaking state
+      // AND we are NOT currently in a game (meaning a match wasn't found before unmount).
+      if (currentIsMatchmaking && !currentInGame) {
+        console.log("MatchConnectionButton unmounting: Attempting to stop matchmaking as game not started.");
         currentStopMatchmaking();
       }
+      // If currentInGame is true, it means a match was found, and the socket should remain connected for the game.
     };
   }, []); // Empty dependency array: cleanup runs ONLY on unmount
 
@@ -51,8 +52,6 @@ function MatchConnectionButton() {
 
   return (
     <div className="flex flex-col items-center gap-2 p-2">
-      {/* <Toaster /> component removed */}
-
       <h1 className="text-lg font-semibold text-gray-800">
         Matchmaking Status:{" "}
         <span className={isMatchmaking ? "text-blue-600" : "text-gray-500"}>
@@ -67,7 +66,7 @@ function MatchConnectionButton() {
         )
       </p>
 
-      {!isMatchmaking ? (
+      {!isMatchmaking && !inGame ? ( // FIX: Only show Start button if not matchmaking AND not in game
         <button
           onClick={handleStartMatchingClick}
           className={`
@@ -79,7 +78,7 @@ function MatchConnectionButton() {
         >
           {!authUser ? 'Login to Match' : 'Start Matching'}
         </button>
-      ) : (
+      ) : ( // Show Stop button if matchmaking OR in game (to allow stopping from game page too if needed, though this button won't be visible there)
         <button
           onClick={handleStopMatchingClick}
           className="
