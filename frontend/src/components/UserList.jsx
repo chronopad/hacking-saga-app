@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 const UserList = () => {
     const { users, getUsers, isUsersLoading } = useChatStore();
     const { onlineUsers, authUser } = useAuthStore();
 
     const [isOpen, setIsOpen] = useState(false);
-
-    console.log("All Users (Registered for chat):", users);
-    console.log("Online User IDs (from socket):", onlineUsers);
-    console.log("Authenticated User:", authUser);
 
     useEffect(() => {
         getUsers();
@@ -25,11 +21,16 @@ const UserList = () => {
             return -1;
         }
 
-        if (!aIsOnline && bIsOnline){
+        if (!aIsOnline && bIsOnline) {
             return 1;
         }
         return (a.username || "").localeCompare(b.username || "");
     });
+
+    const otherOnlinePlayersCount = onlineUsers.filter(id => id !== authUser?._id).length;
+    const onlineStatusText = otherOnlinePlayersCount === 0 
+        ? "No other player active" 
+        : `(${otherOnlinePlayersCount}) other player online.`;
 
     return (
         <>
@@ -55,7 +56,7 @@ const UserList = () => {
                         Players List
                     </h1>
                     <p className="text-gray-600 text-sm text-center mt-1">
-                        {onlineUsers.length === 1 && authUser ? "No other player active" : `(${onlineUsers.filter(id => id !== authUser?._id).length}) other player online.`}
+                        {onlineStatusText}
                     </p>
                 </div>
 
@@ -75,10 +76,10 @@ const UserList = () => {
                                     <li
                                         key={user._id} 
                                         className={`relative flex items-center gap-3 p-2 rounded-lg 
-                                                   transition-all duration-200 cursor-pointer
-                                                   ${isCurrentUser 
-                                                       ? 'bg-blue-100 border border-blue-300 shadow-sm' 
-                                                       : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                    transition-all duration-200 cursor-pointer
+                                                    ${isCurrentUser 
+                                                        ? 'bg-blue-100 border border-blue-300 shadow-sm' 
+                                                        : 'bg-gray-100 hover:bg-gray-200'}`}
                                     >
                                         <img
                                             src={user.profilePic || "/avatar.png"}

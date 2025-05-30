@@ -25,8 +25,6 @@ const App = () => {
     const { theme } = useThemeStore();
     const { inGame } = useGameStore(); 
 
-    console.log({ onlineUsers });
-
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
@@ -37,8 +35,6 @@ const App = () => {
             navigate('/game');
         }
     }, [inGame, location.pathname, navigate]);
-
-    console.log({ authUser });
 
     if (isCheckingAuth && !authUser)
         return (

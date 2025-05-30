@@ -19,7 +19,7 @@ const HomePage = () => {
             </div>
         
             {/* Boat element */}
-            <img src="final-logo.svg" alt="HAGA Boat Logo" className="absolute left-1/2 top-[11%] transform -translate-x-1/2 z-20 boat-animation width-375" />
+            <img src="ship-logo.png" alt="HAGA Boat Logo" className="absolute left-1/2 top-[11%] transform -translate-x-1/2 z-20 boat-animation width-375" />
             
             {/* Main home page content*/}
             <div className="absolute w-full top-[65%] left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center p-6 text-center z-10">
