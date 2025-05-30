@@ -10,47 +10,46 @@ function GamePage() {
     const { authUser } = useAuthStore();
 
     const [showGameEndedDialog, setShowGameEndedDialog] = useState(false);
-    const [isDeclaringWin, setIsDeclaringWin] = useState(false); // NEW STATE: To immediately disable button
+    const [isDeclaringWin, setIsDeclaringWin] = useState(false);
 
-    // Redirect if not in a game state AND game is not yet in its 'ended' state (where dialog would show)
+    // Effect for handling navigation based on game state
     useEffect(() => {
-        // If not in game and dialog is not showing, navigate away
-        // This handles cases like direct access to /game or if the socket disconnects prematurely
-        if (!inGame && !gameEnded) { // If game not active AND not waiting for end dialog
-            console.log("Not in game and game not ended, navigating to home.");
+        // Navigate home if not authenticated OR if not in a game and no game result is being shown
+        if (!authUser || (!inGame && !gameEnded)) {
+            console.log("GamePage: Navigating home due to game state or no authUser.");
             navigate('/');
         }
-    }, [inGame, gameEnded, navigate]); // Dependencies adjusted
+    }, [authUser, inGame, gameEnded, navigate]);
 
-    // Show dialog when gameEnded state changes to true
+    // Effect for showing game ended dialog
     useEffect(() => {
         if (gameEnded) {
             setShowGameEndedDialog(true);
-            setIsDeclaringWin(false); // Reset this state once game has officially ended
-            console.log("Game ended, showing dialog.");
+            setIsDeclaringWin(false); // Reset button state
+            console.log("GamePage: Game ended, showing dialog.");
         }
     }, [gameEnded]);
 
     // Handle the "I Win!" button click
     const handleWinClick = () => {
         // Only allow clicking if authenticated, match data exists,
-        // we are not already declaring a win, and the game hasn't already ended.
-        if (authUser && matchData?.matchId && !isDeclaringWin && !gameEnded) {
-            setIsDeclaringWin(true); // Immediately set state to disable button
+        // not already declaring a win, and the game hasn't officially ended.
+        if (authUser?._id && matchData?.matchId && !isDeclaringWin && !gameEnded) {
+            setIsDeclaringWin(true);
             playerWins(matchData.matchId, authUser._id);
-            console.log("Attempting to declare win...");
+            console.log("GamePage: Attempting to declare win...");
         } else {
-            console.warn("Cannot declare win: Conditions not met (e.g., already clicked, game ended, or missing data).");
+            console.warn("GamePage: Cannot declare win: Conditions not met (e.g., already clicked, game ended, or missing data).");
         }
     };
 
     // Handle "Back to Home" button in dialog
     const handleBackToHome = () => {
-        setShowGameEndedDialog(false); // Hide dialog
-        resetGame(); // Reset game state and disconnect socket (this will trigger App.jsx to navigate)
+        setShowGameEndedDialog(false);
+        resetGame(); // Resets game state and disconnects socket
     };
 
-    // Render loading/redirecting state if not authenticated or not actively in a game/ended state
+    // Render loading or unauthorized state
     if (!authUser) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-gray-700">
@@ -62,7 +61,8 @@ function GamePage() {
         );
     }
 
-    if (!inGame && !gameEnded) { // Show loading if not in game and not displaying end dialog
+    // Show loading if game is not active and no game result is pending to display
+    if (!inGame && !gameEnded) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-gray-700">
                 <h2 className="text-xl font-bold">Loading game or redirecting...</h2>
@@ -99,7 +99,7 @@ function GamePage() {
                             hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed
                         "
                     >
-                        {isDeclaringWin ? 'Declaring Win...' : 'I Win! (Click to end game)'} {/* Dynamic button text */}
+                        {isDeclaringWin ? 'Declaring Win...' : 'I Win! (Click to end game)'}
                     </button>
                     {!socket?.connected && (
                         <p className="text-red-500 text-sm mt-2">Socket not connected. Cannot declare win.</p>
@@ -115,8 +115,7 @@ function GamePage() {
                         <p className="text-xl text-gray-700 mb-6">
                             Winner: <span className="font-semibold text-purple-600">{gameResult.winnerId}</span>
                         </p>
-                        {/* Optionally display reason for game end */}
-                        {gameResult.reason && gameResult.reason === "opponent_disconnected" && (
+                        {gameResult.reason === "opponent_disconnected" && (
                             <p className="text-md text-red-500 mb-4">Opponent Disconnected!</p>
                         )}
                         <button
