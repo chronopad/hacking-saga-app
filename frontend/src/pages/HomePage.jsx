@@ -1,4 +1,5 @@
 import UserList from "../components/UserList";
+import MatchConnectionButton from "../components/MatchConnectionButton";
 
 const HomePage = () => {
     return (
@@ -28,9 +29,7 @@ const HomePage = () => {
                 <p className="text-lg text-gray-600 mb-4 max-w-md mx-auto">
                     Sudah merasa jago?
                 </p>
-                <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-md shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-                    Start Matching
-                </button>
+                <MatchConnectionButton />
             </div>
             <UserList />
         </div>
